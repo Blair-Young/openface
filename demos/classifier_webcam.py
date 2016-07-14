@@ -102,7 +102,52 @@ def getRep(bgrImg):
 def infer(img,args):
     with open(args.classifierModel, 'r') as f:
         (le, clf) = pickle.load(f) #le - label and clf - classifer
-    
+    reps = getRep(img)
+    persons = []
+    confidences = []
+    for rep in reps:
+        try:
+            rep = rep.reshape(1, -1)
+        except:
+            print "No Face detected"
+            return (None, None)
+        start = time.time()
+        predictions = clf.predict_proba(rep).ravel()
+        #print predictions
+        #print clf.predict(rep)
+        maxI = np.argmax(predictions)
+        max2 = np.argsort(predictions)[-3:][::-1] [1]
+
+        if predictions[maxI] < 0.7:
+            try:
+                person_ , confidence_ = inferIndividual (img,le.inverse_transform(maxI))
+                if person_ == 'others':
+                    person_ , confidence_ = inferIndividual (img,le.inverse_transform(max2))
+                persons.append(person_)
+                confidences.append("%.2f" % confidence_)
+            except:
+                persons.append (le.inverse_transform(maxI))
+                confidences.append ("%.2f" % predictions[maxI])
+        else:
+            persons.append (le.inverse_transform(maxI))
+            #print str(le.inverse_transform(max2)) + ": "+str( predictions [max2])
+            confidences.append ("%.2f" % predictions[maxI])
+        if args.verbose:
+            print("Prediction took {} seconds.".format(time.time() - start))
+            pass
+        #print("Predict {} with {:.2f} confidence.".format(person, confidence))
+        if isinstance(clf, GMM):
+            dist = np.linalg.norm(rep - clf.means_[maxI])
+            print("  + Distance from the mean: {}".format(dist))
+            pass
+    return (persons,confidences)
+
+def inferIndividual(img,person):
+    try:
+        with open('/Users/Vijay/Documents/ImageProcessing/FaceRecognition/openface/data/puneWingifighters/features/individual-classifiers/' + person + '.pkl' , 'r') as f:
+            (le, clf) = pickle.load(f) #le - label and clf - classifer
+    except:
+        return (None,None)
     reps = getRep(img)
     persons = []
     confidences = []
@@ -118,26 +163,25 @@ def infer(img,args):
         maxI = np.argmax(predictions)
         max2 = np.argsort(predictions)[-3:][::-1] [1]
         persons.append (le.inverse_transform(maxI))
-        print
-        print str(le.inverse_transform(max2)) + ": "+str( predictions [max2])
         confidences.append (predictions[maxI])
         if args.verbose:
             print("Prediction took {} seconds.".format(time.time() - start))
             pass
-        #print("Predict {} with {:.2f} confidence.".format(person, confidence))
+        #print "Second Layer predicts - {} as {} with conf {}".format(person,persons[0],confidences[0] )
         if isinstance(clf, GMM):
             dist = np.linalg.norm(rep - clf.means_[maxI])
             print("  + Distance from the mean: {}".format(dist))
             pass
-    return (persons,confidences)
+    if confidences[0] > 0.7:
+        return (persons[0],confidences[0])
+    else:
+        return ('others',confidences[0])
 
 
 if __name__ == '__main__':
     video_capture = cv2.VideoCapture(0)
     video_capture.set(3,320)
     video_capture.set(4,240)
-    
-    
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--dlibFacePredictor', type=str,
@@ -165,22 +209,29 @@ if __name__ == '__main__':
         ret, frame = video_capture.read()
         noOfFrames += 1
         persons,confidences = infer(frame, args)
-        print "P: " + str(persons) + " C: " + str(confidences)
-        try:
-            confidenceList.append(confidences[0])
-        except:
-            pass
-        if time.time() - beginTime >= 5:
-            print "noOfFrames: " + str(noOfFrames)
-            print "******* Avg. conf:" + str(np.mean(confidenceList)) + " *******"
-            beginTime = time.time()
+        #print "P: " + str(persons) + " C: " + str(confidences)
+#        try:
+#            confidenceList.append(confidences[0])
+#        except:
+#            pass
+#        if time.time() - beginTime >= 5:
+#            print "noOfFrames: " + str(noOfFrames)
+#            print "******* Avg. conf:" + str(np.mean(confidenceList)) + " *******"
+#            beginTime = time.time()
             #time.sleep(3)
             #sys.exit()
             
-        for i,c in enumerate(confidences):
-            if c<=0.5:
-                persons[i] = "_unknown"
-        
+#        for i,c in enumerate(confidences):
+#            if c<=0.5:
+#                persons[i] = "_unknown"
+
+#        try:
+#            inferIndividual(frame,persons[0])
+#            pass
+#        except:
+#            pass
+
+
         cv2.putText(frame ,"P: " + str(persons) + " C: " + str(confidences) ,(50,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,255,255),1)
         cv2.imshow('', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
