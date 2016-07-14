@@ -35,7 +35,8 @@ cmd:text('Face recognition server.')
 cmd:text()
 cmd:text('Options:')
 
-cmd:option('-model', './models/openface/nn4.v1.t7', 'Path to model.')
+--cmd:option('-model', './models/openface/nn4.v1.t7', 'Path to model.')
+cmd:option('-model', './models/openface/nn4.v1.ascii.t7', 'Path to model.') --Ascii load for the ARM Arch. Check https://github.com/cmusatyalab/openface/issues/42
 cmd:option('-imgDim', 96, 'Image dimension. nn1=224, nn4=96')
 cmd:option('-cuda', false)
 cmd:text()
@@ -43,7 +44,8 @@ cmd:text()
 opt = cmd:parse(arg or {})
 -- print(opt)
 
-net = torch.load(opt.model)
+--net = torch.load(opt.model)
+net = torch.load(opt.model,'ascii') -- Ascii load for ARM. Check Issue #42
 net:evaluate()
 -- print(net)
 

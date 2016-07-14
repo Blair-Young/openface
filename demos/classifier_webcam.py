@@ -133,9 +133,7 @@ def infer(img,args):
 
 
 if __name__ == '__main__':
-    video_capture = cv2.VideoCapture(0)
-    video_capture.set(3,320)
-    video_capture.set(4,240)
+    
     
     
     
@@ -146,7 +144,7 @@ if __name__ == '__main__':
                                              "shape_predictor_68_face_landmarks.dat"))
     parser.add_argument('--networkModel', type=str,
                      help="Path to Torch network model.",
-                     default=os.path.join(openfaceModelDir, 'nn4.small2.v1.t7'))
+                     default=os.path.join(openfaceModelDir, 'nn4.v1.ascii.t7')) #Changed from nn4.small2.v1.t7 - Ref Issue #42
     parser.add_argument('--imgDim', type=int,
                         help="Default image dimension.", default=96)
     parser.add_argument('--cuda', action='store_true')
@@ -161,6 +159,10 @@ if __name__ == '__main__':
     confidenceList = []
     beginTime = time.time()
     noOfFrames = 0
+    
+    video_capture = cv2.VideoCapture(1)
+    video_capture.set(3,320)
+    video_capture.set(4,240)
     while True:
         ret, frame = video_capture.read()
         noOfFrames += 1
